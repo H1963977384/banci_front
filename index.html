@@ -7,13 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-custom-dark { background-color: #1a2a3a; }
+        /* 斑马纹：偶数行黄色，奇数行白色 */
         .table-stripe:nth-child(even) { background-color: #FFC000; }
         .table-stripe:nth-child(odd) { background-color: #ffffff; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="bg-custom-dark text-white py-6 text-center shadow-lg">
-        <h1 id="title_line" class="text-3xl font-bold tracking-widest">📅 公交车运行时刻查询系统</h1>
+        <h1 id="title_line" class="text-3xl font-bold tracking-widest">📅 珠海公交运行时刻查询</h1>
     </div>
 
     <div class="max-w-7xl mx-auto mt-6 px-4">
@@ -26,13 +27,13 @@
                        value="">
             </div>
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm text-gray-600 mb-1">选择日期</label>
-                <input type="date" id="dateInput" class="w-full border rounded p-2" value="{{ today }}">
+                <label class="block text-sm text-gray-600 mb-1">选择日期 (昨天至3个月前)</label>
+                <input type="date" id="dateInput" class="w-full border rounded p-2">
             </div>
             <button onclick="fetchData()" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 rounded transition shadow">🔍 查询</button>
             <div class="ml-auto text-right border-l pl-6 hidden md:block">
                 <p class="text-gray-400 text-xs">运行日期</p>
-                <p id="displayDate" class="text-red-500 font-bold">{{ today }}</p>
+                <p id="displayDate" class="text-red-500 font-bold"></p>
             </div>
         </div>
 
@@ -40,7 +41,7 @@
             <table class="w-full border-collapse text-sm text-center">
                 <thead>
                     <tr class="bg-gray-100 border-b">
-                        <th id="main_title" colspan="1" class="p-3 text-lg font-bold text-gray-700">线路运行时刻表</th>
+                        <th id="main_title" colspan="1" class="p-3 text-lg font-bold text-gray-700">请选择线路查询</th>
                     </tr>
                     <tr class="border-b" id="headerRow0">
                         <th rowspan="2" class="p-3 border-r bg-gray-50 w-20">班别</th>
@@ -57,15 +58,43 @@
     </div>
 
     <script>
-        // 在 script 标签开头加入
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('dateInput').value = today;
-        document.getElementById('displayDate').innerText = today;
-        
+        // --- 日期限制逻辑 ---
+        function initDatePicker() {
+            const dateInput = document.getElementById('dateInput');
+            const now = new Date();
+            
+            // 昨天
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            // 三个月前 (按90天计算)
+            const threeMonthsAgo = new Date(now);
+            threeMonthsAgo.setDate(now.getDate() - 90);
+            const minDateStr = threeMonthsAgo.toISOString().split('T')[0];
+            
+            // 设置日期控件限制
+            dateInput.max = yesterdayStr;
+            dateInput.min = minDateStr;
+            
+            // 默认显示昨天
+            dateInput.value = yesterdayStr;
+            document.getElementById('displayDate').innerText = yesterdayStr;
+        }
+
         async function fetchData() {
-            const route = document.getElementById('routeInput').value;
+            const route = document.getElementById('routeInput').value.trim();
             const date = document.getElementById('dateInput').value;
+            
+            if (!route) {
+                alert("请输入线路号");
+                return;
+            }
+
+            // 更新页面显示的日期和标题
             document.getElementById('displayDate').innerText = date;
+            const fullTitle = `${route}路运行时刻表`;
+            document.getElementById('main_title').innerText = fullTitle;
 
             try {
                 const resp = await fetch(`https://banci-4o6a.onrender.com/api/timetable?route=${route}&date=${date}`);
@@ -76,7 +105,7 @@
                 const totalCols = 1 + data.max_up + data.max_down;
                 document.getElementById('main_title').colSpan = totalCols;
 
-                // 更新站名和跨列
+                // 更新站名
                 document.getElementById('up_name').innerText = data.up_station;
                 document.getElementById('up_name').colSpan = data.max_up;
                 document.getElementById('down_name').innerText = data.down_station;
@@ -94,12 +123,10 @@
                     html += `<tr class="table-stripe border-b">
                         <td class="p-3 border-r font-medium">${index + 1}</td>`;
                     
-                    // 上行数据 (移除了原本的第一个 "-" 单元格)
                     row.up_times.forEach(t => {
                         html += `<td class="p-2 border-r">${t}</td>`;
                     });
                     
-                    // 下行数据
                     row.down_times.forEach(t => {
                         html += `<td class="p-2 border-r">${t}</td>`;
                     });
@@ -112,7 +139,8 @@
             }
         }
         
-        window.onload = fetchData;
+        // 页面加载初始化
+        window.onload = initDatePicker;
     </script>
 </body>
 </html>
