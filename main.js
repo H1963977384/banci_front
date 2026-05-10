@@ -85,10 +85,10 @@ async function fetchData() {
         // 4. 更新序号行 (1, 2, 3...)
         let headerHtml = "";
         for(let i = 1; i <= data.max_up; i++) {
-            headerHtml += `<th class="p-2 border-r w-20 bg-gray-50">${i}</th>`;
+            headerHtml += `<th class="p-2 border-r w-20">${i}</th>`;
         }
         for(let i = 1; i <= data.max_down; i++) {
-            headerHtml += `<th class="p-2 border-r w-20 bg-gray-50">${i}</th>`;
+            headerHtml += `<th class="p-2 border-r w-20">${i}</th>`;
         }
         document.getElementById('headerRow1').innerHTML = headerHtml;
 
