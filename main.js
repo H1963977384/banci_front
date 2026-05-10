@@ -25,9 +25,9 @@ function initDatePicker() {
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    // 计算90天前
+    // 计算30天前
     const threeMonthsAgo = new Date(now);
-    threeMonthsAgo.setDate(now.getDate() - 90);
+    threeMonthsAgo.setDate(now.getDate() - 30);
     const minDateStr = threeMonthsAgo.toISOString().split('T')[0];
     
     dateInput.max = yesterdayStr;
