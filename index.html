@@ -200,7 +200,14 @@ async function searchBus(){
         let url = `https://banci-4o6a.onrender.com/api/bus?route=${route}&date=${date}`;
 
         let res = await fetch(url);
-        let data = await res.json();
+        let result = await res.json();
+        
+        let data = result.data;
+        let upCols = result.up_cols;
+        let downCols = result.down_cols;
+        let title = result.title;
+        let upName = result.up_name;
+        let downName = result.down_name;
 
         if(!data || data.length === 0){
             document.getElementById("tableContainer").innerHTML =
@@ -209,21 +216,20 @@ async function searchBus(){
         }
 
         let html = `
-        <table>
+            <table>
             <thead>
-                <tr>
-                    <th rowspan="2">班别</th>
-                    <th rowspan="2">金康路南（头尾班）</th>
-                    <th colspan="5">红旗总站（上行）</th>
-                    <th colspan="5">金康路南（下行）</th>
-                </tr>
-                <tr>
-                    <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
-                    <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
-                </tr>
+            <tr>
+                <th rowspan="2">车号</th>
+                <th colspan="${upCols.length}">${upName}</th>
+                <th colspan="${downCols.length}">${downName}</th>
+            </tr>
+            <tr>
+                ${upCols.map((_,i)=>`<th>${i+1}</th>`).join("")}
+                ${downCols.map((_,i)=>`<th>${i+1}</th>`).join("")}
+            </tr>
             </thead>
             <tbody>
-        `;
+            `;
 
         data.forEach((row,i)=>{
 
@@ -231,7 +237,22 @@ async function searchBus(){
 
             // 假设数据顺序：
             // [班别, 头尾班, 上行1-5, 下行1-5]
-            let values = Object.values(row);
+            data.forEach(row => {
+
+                html += "<tr>";
+            
+                html += `<td>${row["车号"]}</td>`;
+            
+                upCols.forEach(c => {
+                    html += `<td>${row[c] || ""}</td>`;
+                });
+            
+                downCols.forEach(c => {
+                    html += `<td>${row[c] || ""}</td>`;
+                });
+            
+                html += "</tr>";
+            });
 
             values.forEach(v=>{
                 html += `<td>${v}</td>`;
