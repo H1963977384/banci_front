@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>公交车次查询</title>
+
+    <style>
+
+        body{
+            font-family: Arial;
+            margin:40px;
+        }
+
+        table{
+            border-collapse: collapse;
+            width:100%;
+            margin-top:20px;
+        }
+
+        th,td{
+            border:1px solid #ccc;
+            padding:8px;
+            text-align:center;
+        }
+
+        th{
+            background:#eee;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <h2>公交车次查询</h2>
+
+    <input id="route" placeholder="输入线路">
+
+    <input id="date" type="date">
+
+    <button onclick="searchBus()">查询</button>
+
+    <div id="tableContainer"></div>
+
+    <script>
+
+        async function searchBus(){
+
+            let route = document.getElementById("route").value;
+
+            let date = document.getElementById("date").value;
+
+            let url = `https://banci-4o6a.onrender.com/api/bus?route=${route}&date=${date}`;
+
+            let response = await fetch(url);
+
+            let data = await response.json();
+
+            if(data.length===0){
+
+                document.getElementById("tableContainer").innerHTML="无数据";
+
+                return;
+            }
+
+            let table = "<table>";
+
+            table += "<tr>";
+
+            Object.keys(data[0]).forEach(key=>{
+                table += `<th>${key}</th>`;
+            });
+
+            table += "</tr>";
+
+            data.forEach(row=>{
+
+                table += "<tr>";
+
+                Object.values(row).forEach(value=>{
+                    table += `<td>${value}</td>`;
+                });
+
+                table += "</tr>";
+
+            });
+
+            table += "</table>";
+
+            document.getElementById("tableContainer").innerHTML = table;
+        }
+
+    </script>
+
+</body>
+</html>
