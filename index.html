@@ -1,277 +1,102 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>公交车次分析系统</title>
-
-<style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    font-family:"Microsoft YaHei",sans-serif;
-    background:linear-gradient(135deg,#0f172a,#1e293b);
-    min-height:100vh;
-    color:white;
-    padding:40px;
-}
-
-.container{
-    max-width:1400px;
-    margin:auto;
-}
-
-.title{
-    font-size:42px;
-    font-weight:bold;
-    text-align:center;
-}
-
-.subtitle{
-    text-align:center;
-    color:#cbd5e1;
-    margin-bottom:30px;
-}
-
-.search-card{
-    background:rgba(255,255,255,0.08);
-    backdrop-filter:blur(12px);
-    border-radius:20px;
-    padding:25px;
-    display:flex;
-    gap:20px;
-    align-items:end;
-    margin-bottom:25px;
-}
-
-.input-group{
-    flex:1;
-}
-
-label{
-    display:block;
-    margin-bottom:8px;
-    color:#e2e8f0;
-}
-
-input{
-    width:100%;
-    padding:12px;
-    border-radius:10px;
-    border:none;
-    background:rgba(255,255,255,0.12);
-    color:white;
-}
-
-button{
-    padding:12px 25px;
-    border:none;
-    border-radius:10px;
-    background:linear-gradient(135deg,#2563eb,#3b82f6);
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-button:hover{
-    transform:translateY(-2px);
-}
-
-.table-card{
-    background:rgba(255,255,255,0.08);
-    backdrop-filter:blur(12px);
-    border-radius:20px;
-    padding:20px;
-    overflow-x:auto;
-}
-
-/* ===== 表格样式 ===== */
-table{
-    width:100%;
-    border-collapse:collapse;
-    min-width:1000px;
-    text-align:center;
-}
-
-th{
-    padding:12px;
-    background:rgba(255,255,255,0.08);
-    color:#93c5fd;
-    border:1px solid rgba(255,255,255,0.1);
-}
-
-td{
-    padding:12px;
-    border:1px solid rgba(255,255,255,0.08);
-}
-
-/* ✔ 奇偶行颜色 */
-tbody tr:nth-child(odd){
-    background:white;
-    color:black;
-}
-
-tbody tr:nth-child(even){
-    background:#f59e0b;
-    color:black;
-}
-
-.right-box{
-    position:absolute;
-    right:40px;
-    top:40px;
-    text-align:center;
-    background:rgba(255,255,255,0.08);
-    padding:10px 20px;
-    border-radius:12px;
-}
-
-.loading,.empty{
-    text-align:center;
-    padding:30px;
-    color:#93c5fd;
-}
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时刻表查询系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-custom-dark { background-color: #1a2a3a; }
+        .table-stripe:nth-child(even) { background-color: #fff7ed; }
+        .table-stripe:nth-child(odd) { background-color: #ffffff; }
+        .first-last-run { color: #ff4d4f; font-weight: bold; }
+    </style>
 </head>
-
-<body>
-
-<div class="container">
-
-    <div class="title">运行时刻查询系统</div>
-
-    <div class="right-box">
-        <div>运行日期</div>
-        <div id="runDate" style="color:red;font-weight:bold;">--</div>
+<body class="bg-gray-100 font-sans">
+    <div class="bg-custom-dark text-white py-6 text-center shadow-lg">
+        <h1 id="title_line" class="text-3xl font-bold tracking-widest">线路运行时刻表</h1>
+        <p class="text-sm opacity-70 mt-2">📅 公交车运行时刻查询系统</p>
     </div>
 
-    <div class="search-card">
-
-        <div class="input-group">
-            <label>线路编号</label>
-            <input id="route" placeholder="Z123">
+    <div class="max-w-7xl mx-auto mt-6 px-4">
+        <div class="bg-white p-6 rounded-lg shadow-md flex flex-wrap gap-4 items-end mb-6">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm text-gray-600 mb-1">线路编号</label>
+                <input type="text" id="routeInput" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 outline-none" value="525">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm text-gray-600 mb-1">选择日期</label>
+                <input type="date" id="dateInput" class="w-full border rounded p-2" value="{{ today }}">
+            </div>
+            <button onclick="fetchData()" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 rounded transition shadow">🔍 查询</button>
+            <div class="ml-auto text-right border-l pl-6 hidden md:block">
+                <p class="text-gray-400 text-xs">运行日期</p>
+                <p id="displayDate" class="text-red-500 font-bold">{{ today }}</p>
+            </div>
         </div>
 
-        <div class="input-group">
-            <label>选择日期</label>
-            <input id="date" type="date">
+        <div class="overflow-x-auto bg-white rounded-lg shadow">
+            <table class="w-full border-collapse text-sm text-center">
+                <thead>
+                    <tr class="border-b" id="headerRow0">
+                        <th rowspan="2" class="p-3 border-r bg-gray-50 w-20">班别</th>
+                        <th rowspan="2" class="p-3 border-r bg-gray-50 w-32 text-red-500">金康路南<br>(头尾班时间)</th>
+                        <th id="up_name" colspan="0" class="p-2 bg-gray-50 text-red-600 border-r">上行站</th>
+                        <th id="down_name" colspan="0" class="p-2 bg-gray-50 text-red-600">下行站</th>
+                    </tr>
+                    <tr class="border-b bg-gray-50" id="headerRow1">
+                        </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
         </div>
-
-        <button onclick="searchBus()">查询</button>
-
+        <p class="mt-4 text-xs text-gray-400">注：<span class="text-red-500">红色</span>为首班车或尾班车时间</p>
     </div>
 
-    <div class="table-card">
+    <script>
+        async function fetchData() {
+            const route = document.getElementById('routeInput').value;
+            const date = document.getElementById('dateInput').value;
+            document.getElementById('displayDate').innerText = date;
+            document.getElementById('title_line').innerText = `${route}路运行时刻表`;
 
-        <div id="tableContainer">
-            <div class="loading">请输入线路并查询</div>
-        </div>
+            const resp = await fetch(`/api/timetable?route=${route}&date=${date}`);
+            const data = await resp.json();
 
-    </div>
+            if (data.error) { alert(data.error); return; }
 
-</div>
+            // 更新表头
+            document.getElementById('up_name').innerText = `${data.up_station}`;
+            document.getElementById('up_name').colSpan = data.max_up;
+            document.getElementById('down_name').innerText = `${data.down_station}`;
+            document.getElementById('down_name').colSpan = data.max_down;
 
-<script>
+            let h1 = "";
+            for(let i=1; i<=data.max_up; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
+            for(let i=1; i<=data.max_down; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
+            document.getElementById('headerRow1').innerHTML = h1;
 
-async function searchBus(){
-
-    let route = document.getElementById("route").value;
-    let date = document.getElementById("date").value;
-
-    if(!route || !date){
-        alert("请输入线路和日期");
-        return;
-    }
-
-    document.getElementById("runDate").innerText = date;
-
-    document.getElementById("tableContainer").innerHTML =
-    `<div class="loading">加载中...</div>`;
-
-    try{
-
-        let url = `https://banci-4o6a.onrender.com/api/bus?route=${route}&date=${date}`;
-
-        let res = await fetch(url);
-        let result = await res.json();
-        
-        let data = result.data;
-        let upCols = result.up_cols;
-        let downCols = result.down_cols;
-        let title = result.title;
-        let upName = result.up_name;
-        let downName = result.down_name;
-
-        if(!data || data.length === 0){
-            document.getElementById("tableContainer").innerHTML =
-            `<div class="empty">无数据</div>`;
-            return;
+            // 更新表格内容
+            let html = "";
+            data.table_data.forEach((row, index) => {
+                html += `<tr class="table-stripe border-b">
+                    <td class="p-3 border-r font-medium">${index + 1}</td>
+                    <td class="p-3 border-r text-gray-400">-</td>`;
+                
+                row.up_times.forEach(t => {
+                    html += `<td class="p-2 border-r ${t.startsWith('06') || t.startsWith('21') ? 'text-red-500 font-bold' : ''}">${t}</td>`;
+                });
+                row.down_times.forEach(t => {
+                    html += `<td class="p-2 border-r ${t.startsWith('06') || t.startsWith('21') ? 'text-red-500 font-bold' : ''}">${t}</td>`;
+                });
+                html += `</tr>`;
+            });
+            document.getElementById('tableBody').innerHTML = html;
         }
-
-        let html = `
-            <table>
-            <thead>
-            <tr>
-                <th rowspan="2">车号</th>
-                <th colspan="${upCols.length}">${upName}</th>
-                <th colspan="${downCols.length}">${downName}</th>
-            </tr>
-            <tr>
-                ${upCols.map((_,i)=>`<th>${i+1}</th>`).join("")}
-                ${downCols.map((_,i)=>`<th>${i+1}</th>`).join("")}
-            </tr>
-            </thead>
-            <tbody>
-            `;
-
-        data.forEach((row,i)=>{
-
-            html += "<tr>";
-
-            // 假设数据顺序：
-            // [班别, 头尾班, 上行1-5, 下行1-5]
-            data.forEach(row => {
-
-                html += "<tr>";
-            
-                html += `<td>${row["车号"]}</td>`;
-            
-                upCols.forEach(c => {
-                    html += `<td>${row[c] || ""}</td>`;
-                });
-            
-                downCols.forEach(c => {
-                    html += `<td>${row[c] || ""}</td>`;
-                });
-            
-                html += "</tr>";
-            });
-
-            values.forEach(v=>{
-                html += `<td>${v}</td>`;
-            });
-
-            html += "</tr>";
-        });
-
-        html += "</tbody></table>";
-
-        document.getElementById("tableContainer").innerHTML = html;
-
-    }catch(e){
-        document.getElementById("tableContainer").innerHTML =
-        `<div class="empty">加载失败</div>`;
-    }
-
-}
-
-</script>
-
+        
+        // 页面加载后自动点击一次查询
+        window.onload = fetchData;
+    </script>
 </body>
 </html>
