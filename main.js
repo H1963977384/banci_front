@@ -82,20 +82,26 @@ async function fetchData() {
         downNameCell.innerText = data.down_station || "下行";
         downNameCell.colSpan = data.max_down;
 
-        // 4. 更新序号行 (1, 2, 3...)
         let headerHtml = "";
+        
+        // 上行序号：数字 1, 2, 3...
         for(let i = 1; i <= data.max_up; i++) {
-            headerHtml += `<th class="p-2 border-r w-20">${i}</th>`;
+            headerHtml += `<th class="p-2 border-r w-20 bg-gray-50 text-gray-600">${i}</th>`;
         }
-        for(let i = 1; i <= data.max_down; i++) {
-            headerHtml += `<th class="p-2 border-r w-20">${i}</th>`;
+        
+        // 下行序号：字母 A, B, C...
+        for(let i = 0; i < data.max_down; i++) {
+            // String.fromCharCode(65) 是 'A'
+            const letter = String.fromCharCode(65 + i); 
+            headerHtml += `<th class="p-2 border-r w-20 bg-gray-50 text-gray-600">${letter}</th>`;
         }
         document.getElementById('headerRow1').innerHTML = headerHtml;
 
         // 5. 渲染表格行数据
         let rowsHtml = "";
         data.table_data.forEach((row, index) => {
-            rowsHtml += `<tr class="table-stripe border-b">
+            // 去掉 table-stripe，交给 CSS 自动处理
+            rowsHtml += `<tr class="border-b">
                 <td class="p-3 border-r font-medium">${index + 1}</td>`;
             
             // 渲染上行时间
