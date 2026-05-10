@@ -7,8 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-custom-dark { background-color: #1a2a3a; }
-        .table-stripe:nth-child(even) { background-color: #FFC000; }
-        .table-stripe:nth-child(odd) { background-color: #ffffff; }
+        
+        /* 直接针对 tbody 里的偶数行设置背景色 */
+        /* 这样可以确保整行（包括第一列）统一变色 */
+        #tableBody tr:nth-child(even) { 
+            background-color: #FFC000 !important; 
+        }
+        
+        #tableBody tr:nth-child(odd) { 
+            background-color: #ffffff; 
+        }
+    
+        /* 这里的边框颜色如果太深，可以微调 */
+        .border-r { border-right-width: 1px; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
