@@ -55,6 +55,11 @@
     </div>
 
     <script>
+        // 在 script 标签开头加入
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = today;
+        document.getElementById('displayDate').innerText = today;
+        
         async function fetchData() {
             const route = document.getElementById('routeInput').value;
             const date = document.getElementById('dateInput').value;
