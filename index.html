@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-custom-dark { background-color: #1a2a3a; }
-        /* 斑马纹：偶数行黄色，奇数行白色 */
         .table-stripe:nth-child(even) { background-color: #FFC000; }
         .table-stripe:nth-child(odd) { background-color: #ffffff; }
     </style>
@@ -17,7 +16,7 @@
         <h1 id="title_line" class="text-3xl font-bold tracking-widest">📅 珠海公交运行时刻查询</h1>
     </div>
 
-    <div class="max-w-7xl mx-auto mt-6 px-4">
+    <div class="max-w-7xl mx-auto mt-6 px-4 pb-12">
         <div class="bg-white p-6 rounded-lg shadow-md flex flex-wrap gap-4 items-end mb-6">
             <div class="flex-1 min-w-[200px]">
                 <label class="block text-sm text-gray-600 mb-1">线路编号</label>
@@ -27,10 +26,10 @@
                        value="">
             </div>
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm text-gray-600 mb-1">选择日期 (昨天至3个月前)</label>
+                <label class="block text-sm text-gray-600 mb-1">选择日期 (3个月)</label>
                 <input type="date" id="dateInput" class="w-full border rounded p-2">
             </div>
-            <button onclick="fetchData()" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 rounded transition shadow">🔍 查询</button>
+            <button id="searchBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 rounded transition shadow">🔍 查询</button>
             <div class="ml-auto text-right border-l pl-6 hidden md:block">
                 <p class="text-gray-400 text-xs">运行日期</p>
                 <p id="displayDate" class="text-red-500 font-bold"></p>
@@ -41,106 +40,26 @@
             <table class="w-full border-collapse text-sm text-center">
                 <thead>
                     <tr class="bg-gray-100 border-b">
-                        <th id="main_title" colspan="1" class="p-3 text-lg font-bold text-gray-700">请选择线路查询</th>
+                        <th id="main_title" colspan="3" class="p-3 text-lg font-bold text-gray-700">请在上方输入线路号并点击查询</th>
                     </tr>
                     <tr class="border-b" id="headerRow0">
                         <th rowspan="2" class="p-3 border-r bg-gray-50 w-20">班别</th>
-                        <th id="up_name" colspan="0" class="p-2 bg-gray-50 text-blue-800 border-r">上行站</th>
-                        <th id="down_name" colspan="0" class="p-2 bg-gray-50 text-blue-800">下行站</th>
+                        <th id="up_name" colspan="1" class="p-2 bg-gray-50 text-blue-800 border-r">上行方向</th>
+                        <th id="down_name" colspan="1" class="p-2 bg-gray-50 text-blue-800">下行方向</th>
                     </tr>
                     <tr class="border-b bg-gray-50" id="headerRow1">
+                        <th class="p-2 border-r bg-gray-50">-</th>
+                        <th class="p-2 bg-gray-50">-</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
+                    <tr><td colspan="3" class="p-12 text-gray-400">暂无数据</td></tr>
                 </tbody>
             </table>
         </div>
+        <p class="mt-4 text-xs text-gray-400 text-center">数据仅供参考，请以实际发车时间为准</p>
     </div>
 
-    <script>
-        // --- 日期限制逻辑 ---
-        function initDatePicker() {
-            const dateInput = document.getElementById('dateInput');
-            const now = new Date();
-            
-            // 昨天
-            const yesterday = new Date(now);
-            yesterday.setDate(now.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-            
-            // 三个月前 (按90天计算)
-            const threeMonthsAgo = new Date(now);
-            threeMonthsAgo.setDate(now.getDate() - 90);
-            const minDateStr = threeMonthsAgo.toISOString().split('T')[0];
-            
-            // 设置日期控件限制
-            dateInput.max = yesterdayStr;
-            dateInput.min = minDateStr;
-            
-            // 默认显示昨天
-            dateInput.value = yesterdayStr;
-            document.getElementById('displayDate').innerText = yesterdayStr;
-        }
-
-        async function fetchData() {
-            const route = document.getElementById('routeInput').value.trim();
-            const date = document.getElementById('dateInput').value;
-            
-            if (!route) {
-                alert("请输入线路号");
-                return;
-            }
-
-            // 更新页面显示的日期和标题
-            document.getElementById('displayDate').innerText = date;
-            const fullTitle = `${route}路运行时刻表`;
-            document.getElementById('main_title').innerText = fullTitle;
-
-            try {
-                const resp = await fetch(`https://banci-4o6a.onrender.com/api/timetable?route=${route}&date=${date}`);
-                const data = await resp.json();
-
-                if (data.error) { alert(data.error); return; }
-
-                const totalCols = 1 + data.max_up + data.max_down;
-                document.getElementById('main_title').colSpan = totalCols;
-
-                // 更新站名
-                document.getElementById('up_name').innerText = data.up_station;
-                document.getElementById('up_name').colSpan = data.max_up;
-                document.getElementById('down_name').innerText = data.down_station;
-                document.getElementById('down_name').colSpan = data.max_down;
-
-                // 更新序号行 (1, 2, 3...)
-                let h1 = "";
-                for(let i=1; i<=data.max_up; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
-                for(let i=1; i<=data.max_down; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
-                document.getElementById('headerRow1').innerHTML = h1;
-
-                // 填充表格数据
-                let html = "";
-                data.table_data.forEach((row, index) => {
-                    html += `<tr class="table-stripe border-b">
-                        <td class="p-3 border-r font-medium">${index + 1}</td>`;
-                    
-                    row.up_times.forEach(t => {
-                        html += `<td class="p-2 border-r">${t}</td>`;
-                    });
-                    
-                    row.down_times.forEach(t => {
-                        html += `<td class="p-2 border-r">${t}</td>`;
-                    });
-                    html += `</tr>`;
-                });
-                document.getElementById('tableBody').innerHTML = html;
-            } catch (err) {
-                console.error("Fetch error:", err);
-                alert("获取数据失败，请检查网络或后端服务。");
-            }
-        }
-        
-        // 页面加载初始化
-        window.onload = initDatePicker;
-    </script>
+    <script src="main.js"></script>
 </body>
 </html>
