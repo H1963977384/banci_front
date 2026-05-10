@@ -7,9 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .bg-custom-dark { background-color: #1a2a3a; }
-        .table-stripe:nth-child(even) { background-color: #fff7ed; }
+        .table-stripe:nth-child(even) { background-color: #FFC000; }
         .table-stripe:nth-child(odd) { background-color: #ffffff; }
-        .first-last-run { color: #ff4d4f; font-weight: bold; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -38,19 +37,21 @@
         <div class="overflow-x-auto bg-white rounded-lg shadow">
             <table class="w-full border-collapse text-sm text-center">
                 <thead>
+                    <tr class="bg-gray-100 border-b">
+                        <th id="main_title" colspan="1" class="p-3 text-lg font-bold text-gray-700">线路运行时刻表</th>
+                    </tr>
                     <tr class="border-b" id="headerRow0">
                         <th rowspan="2" class="p-3 border-r bg-gray-50 w-20">班别</th>
-                        <th id="up_name" colspan="0" class="p-2 bg-gray-50 text-red-600 border-r">上行站</th>
-                        <th id="down_name" colspan="0" class="p-2 bg-gray-50 text-red-600">下行站</th>
+                        <th id="up_name" colspan="0" class="p-2 bg-gray-50 text-blue-800 border-r">上行站</th>
+                        <th id="down_name" colspan="0" class="p-2 bg-gray-50 text-blue-800">下行站</th>
                     </tr>
                     <tr class="border-b bg-gray-50" id="headerRow1">
-                        </tr>
+                    </tr>
                 </thead>
                 <tbody id="tableBody">
-                    </tbody>
+                </tbody>
             </table>
         </div>
-        <p class="mt-4 text-xs text-gray-400">注：<span class="text-red-500">红色</span>为首班车或尾班车时间</p>
     </div>
 
     <script>
@@ -58,43 +59,56 @@
             const route = document.getElementById('routeInput').value;
             const date = document.getElementById('dateInput').value;
             document.getElementById('displayDate').innerText = date;
-            document.getElementById('title_line').innerText = `${route}路运行时刻表`;
+            
+            const titleText = `${route}路运行时刻表`;
+            document.getElementById('title_line').innerText = titleText;
+            document.getElementById('main_title').innerText = titleText;
 
-            const resp = await fetch(`https://banci-4o6a.onrender.com/api/timetable?route=${route}&date=${date}`);
-            const data = await resp.json();
+            try {
+                const resp = await fetch(`https://banci-4o6a.onrender.com/api/timetable?route=${route}&date=${date}`);
+                const data = await resp.json();
 
-            if (data.error) { alert(data.error); return; }
+                if (data.error) { alert(data.error); return; }
 
-            // 更新表头
-            document.getElementById('up_name').innerText = `${data.up_station}`;
-            document.getElementById('up_name').colSpan = data.max_up;
-            document.getElementById('down_name').innerText = `${data.down_station}`;
-            document.getElementById('down_name').colSpan = data.max_down;
+                const totalCols = 1 + data.max_up + data.max_down;
+                document.getElementById('main_title').colSpan = totalCols;
 
-            let h1 = "";
-            for(let i=1; i<=data.max_up; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
-            for(let i=1; i<=data.max_down; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
-            document.getElementById('headerRow1').innerHTML = h1;
+                // 更新站名和跨列
+                document.getElementById('up_name').innerText = data.up_station;
+                document.getElementById('up_name').colSpan = data.max_up;
+                document.getElementById('down_name').innerText = data.down_station;
+                document.getElementById('down_name').colSpan = data.max_down;
 
-            // 更新表格内容
-            let html = "";
-            data.table_data.forEach((row, index) => {
-                html += `<tr class="table-stripe border-b">
-                    <td class="p-3 border-r font-medium">${index + 1}</td>
-                    <td class="p-3 border-r text-gray-400">-</td>`;
-                
-                row.up_times.forEach(t => {
-                    html += `<td class="p-2 border-r ${t.startsWith('06') || t.startsWith('21') ? 'text-red-500 font-bold' : ''}">${t}</td>`;
+                // 更新序号行 (1, 2, 3...)
+                let h1 = "";
+                for(let i=1; i<=data.max_up; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
+                for(let i=1; i<=data.max_down; i++) h1 += `<th class="p-2 border-r w-20">${i}</th>`;
+                document.getElementById('headerRow1').innerHTML = h1;
+
+                // 填充表格数据
+                let html = "";
+                data.table_data.forEach((row, index) => {
+                    html += `<tr class="table-stripe border-b">
+                        <td class="p-3 border-r font-medium">${index + 1}</td>`;
+                    
+                    // 上行数据 (移除了原本的第一个 "-" 单元格)
+                    row.up_times.forEach(t => {
+                        html += `<td class="p-2 border-r">${t}</td>`;
+                    });
+                    
+                    // 下行数据
+                    row.down_times.forEach(t => {
+                        html += `<td class="p-2 border-r">${t}</td>`;
+                    });
+                    html += `</tr>`;
                 });
-                row.down_times.forEach(t => {
-                    html += `<td class="p-2 border-r ${t.startsWith('06') || t.startsWith('21') ? 'text-red-500 font-bold' : ''}">${t}</td>`;
-                });
-                html += `</tr>`;
-            });
-            document.getElementById('tableBody').innerHTML = html;
+                document.getElementById('tableBody').innerHTML = html;
+            } catch (err) {
+                console.error("Fetch error:", err);
+                alert("获取数据失败，请检查网络或后端服务。");
+            }
         }
         
-        // 页面加载后自动点击一次查询
         window.onload = fetchData;
     </script>
 </body>
