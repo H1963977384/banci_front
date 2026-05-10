@@ -13,8 +13,7 @@
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="bg-custom-dark text-white py-6 text-center shadow-lg">
-        <h1 id="title_line" class="text-3xl font-bold tracking-widest">线路运行时刻表</h1>
-        <p class="text-sm opacity-70 mt-2">📅 公交车运行时刻查询系统</p>
+        <h1 id="title_line" class="text-3xl font-bold tracking-widest">📅 公交车运行时刻查询系统</h1>
     </div>
 
     <div class="max-w-7xl mx-auto mt-6 px-4">
@@ -64,10 +63,6 @@
             const route = document.getElementById('routeInput').value;
             const date = document.getElementById('dateInput').value;
             document.getElementById('displayDate').innerText = date;
-            
-            const titleText = `运行时刻表`;
-            document.getElementById('title_line').innerText = titleText;
-            document.getElementById('main_title').innerText = titleText;
 
             try {
                 const resp = await fetch(`https://banci-4o6a.onrender.com/api/timetable?route=${route}&date=${date}`);
