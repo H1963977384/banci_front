@@ -60,7 +60,7 @@
             document.getElementById('displayDate').innerText = date;
             document.getElementById('title_line').innerText = `${route}路运行时刻表`;
 
-            const resp = await fetch(`/api/timetable?route=${route}&date=${date}`);
+            const resp = await fetch(`https://banci-4o6a.onrender.com/api/timetable?route=${route}&date=${date}`);
             const data = await resp.json();
 
             if (data.error) { alert(data.error); return; }
