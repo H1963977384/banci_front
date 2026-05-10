@@ -96,7 +96,7 @@ async function fetchData() {
         let rowsHtml = "";
         data.table_data.forEach((row, index) => {
             rowsHtml += `<tr class="table-stripe border-b">
-                <td class="p-3 border-r font-medium bg-gray-50">${index + 1}</td>`;
+                <td class="p-3 border-r font-medium">${index + 1}</td>`;
             
             // 渲染上行时间
             row.up_times.forEach(t => {
