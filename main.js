@@ -2,8 +2,8 @@
  * 珠海公交时刻表查询系统 - 逻辑处理
  */
 
-// 配置项：如果以后换了后端地址，只改这里即可
 const API_BASE_URL = "https://banci-4o6a.onrender.com/api/timetable";
+const CHECK_AUTH_URL = "https://banci-4o6a.onrender.com/api/check_auth";
 
 // 1. 页面加载初始化
 window.onload = function() {
@@ -13,22 +13,71 @@ window.onload = function() {
 };
 
 /**
- * 初始化日期选择器范围（昨天至7天前）
+ * 获取或生成设备唯一标识 (浏览器指纹)
+ */
+function getFingerprint() {
+    let id = localStorage.getItem('device_id');
+    if (!id) {
+        // 生成一个包含时间戳的随机字符串
+        id = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase() + Date.now().toString().slice(-4);
+        localStorage.setItem('device_id', id);
+    }
+    return id;
+}
+
+/**
+ * 身份验证逻辑：判断设备是否已绑定
+ */
+async function ensureAuth() {
+    const deviceId = getFingerprint();
+    let inviteCode = localStorage.getItem('invite_code');
+
+    // 如果本地已经存了码，先静默尝试验证
+    if (inviteCode) {
+        try {
+            const res = await fetch(`${CHECK_AUTH_URL}?code=${inviteCode}&device_id=${deviceId}`);
+            if (res.ok) return { inviteCode, deviceId }; 
+        } catch (e) {
+            console.error("验证服务连接失败");
+        }
+    }
+
+    // 如果本地没码，或者验证失败（比如后端重启后码被重置了，或者码被踢了）
+    inviteCode = prompt("该设备尚未绑定，请输入邀请码：");
+    if (inviteCode) {
+        // 尝试去后端绑定
+        try {
+            const res = await fetch(`${CHECK_AUTH_URL}?code=${inviteCode}&device_id=${deviceId}`);
+            if (res.ok) {
+                localStorage.setItem('invite_code', inviteCode);
+                alert("绑定成功！");
+                return { inviteCode, deviceId };
+            } else {
+                alert("邀请码无效或已被他人占用");
+                localStorage.removeItem('invite_code');
+            }
+        } catch (e) {
+            alert("无法连接到验证服务器");
+        }
+    }
+    return null;
+}
+
+/**
+ * 初始化日期选择器范围
  */
 function initDatePicker() {
     const dateInput = document.getElementById('dateInput');
     const displayDate = document.getElementById('displayDate');
     const now = new Date();
     
-    // 计算昨天
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    // 计算7天前
-    const threeMonthsAgo = new Date(now);
-    threeMonthsAgo.setDate(now.getDate() - 7);
-    const minDateStr = threeMonthsAgo.toISOString().split('T')[0];
+    const minDate = new Date(now);
+    minDate.setDate(now.getDate() - 7);
+    const minDateStr = minDate.toISOString().split('T')[0];
     
     dateInput.max = yesterdayStr;
     dateInput.min = minDateStr;
@@ -37,9 +86,13 @@ function initDatePicker() {
 }
 
 /**
- * 核心抓取函数
+ * 核心查询函数
  */
 async function fetchData() {
+    // A. 身份校验拦截
+    const auth = await ensureAuth();
+    if (!auth) return; // 没过验证就不往下走
+
     const routeInput = document.getElementById('routeInput');
     const dateInput = document.getElementById('dateInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -54,62 +107,52 @@ async function fetchData() {
         return;
     }
 
-    // 状态更新：锁定按钮
     searchBtn.innerText = "正在生成...";
     searchBtn.disabled = true;
 
     try {
-        const response = await fetch(`${API_BASE_URL}?route=${route}&date=${date}`);
+        // B. 请求带上 code 和 device_id
+        const url = `${API_BASE_URL}?route=${route}&date=${date}&code=${auth.inviteCode}&device_id=${auth.deviceId}`;
+        const response = await fetch(url);
         const data = await response.json();
 
-        if (data.error) { 
-            alert(data.error); 
+        if (!response.ok) { 
+            alert(data.error || "查询失败");
+            // 如果后端返回 403，说明码失效了，清理掉缓存
+            if (response.status === 403) localStorage.removeItem('invite_code');
             return; 
         }
 
-        // 2. 动态计算总跨列数并更新标题
+        // --- 以下是原有的表格渲染逻辑 ---
         const totalCols = 1 + data.max_up + data.max_down;
         mainTitle.colSpan = totalCols;
         mainTitle.innerText = `${route}路运行时刻表`;
         document.getElementById('displayDate').innerText = date;
 
-        // 3. 更新上下行站名
         const upNameCell = document.getElementById('up_name');
         const downNameCell = document.getElementById('down_name');
-        
         upNameCell.innerText = data.up_station || "上行";
         upNameCell.colSpan = data.max_up;
         downNameCell.innerText = data.down_station || "下行";
         downNameCell.colSpan = data.max_down;
 
         let headerHtml = "";
-        
-        // 上行序号：数字 1, 2, 3...
         for(let i = 1; i <= data.max_up; i++) {
             headerHtml += `<th class="p-2 border-r w-20 bg-gray-50 text-gray-600">${i}</th>`;
         }
-        
-        // 下行序号：字母 A, B, C...
         for(let i = 0; i < data.max_down; i++) {
-            // String.fromCharCode(65) 是 'A'
             const letter = String.fromCharCode(65 + i); 
             headerHtml += `<th class="p-2 border-r w-20 bg-gray-50 text-gray-600">${letter}</th>`;
         }
         document.getElementById('headerRow1').innerHTML = headerHtml;
 
-        // 5. 渲染表格行数据
         let rowsHtml = "";
         data.table_data.forEach((row, index) => {
-            // 去掉 table-stripe，交给 CSS 自动处理
             rowsHtml += `<tr class="border-b">
                 <td class="p-3 border-r font-medium">${index + 1}</td>`;
-            
-            // 渲染上行时间
             row.up_times.forEach(t => {
                 rowsHtml += `<td class="p-2 border-r">${t}</td>`;
             });
-            
-            // 渲染下行时间
             row.down_times.forEach(t => {
                 rowsHtml += `<td class="p-2 border-r">${t}</td>`;
             });
