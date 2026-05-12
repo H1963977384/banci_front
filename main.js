@@ -13,7 +13,7 @@ window.onload = function() {
 };
 
 /**
- * 初始化日期选择器范围（昨天至90天前）
+ * 初始化日期选择器范围（昨天至30天前）
  */
 function initDatePicker() {
     const dateInput = document.getElementById('dateInput');
@@ -55,7 +55,7 @@ async function fetchData() {
     }
 
     // 状态更新：锁定按钮
-    searchBtn.innerText = "正在查询...";
+    searchBtn.innerText = "正在生成...";
     searchBtn.disabled = true;
 
     try {
